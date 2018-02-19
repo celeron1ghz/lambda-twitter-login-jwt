@@ -41,17 +41,22 @@ module.exports.auth = (event, context, callback) => {
 };
 
 module.exports.callback = (event, context, callback) => {
-  vo(function*(){
-    const query  = event.queryStringParameters;
+  return vo(function*(){
+    if (!event.headers.Cookie) {
+      throw new Error("NO_DATA1");
+    }
+
     const sessid = Cookie.parse(event.headers.Cookie || '').sessid;
-    const oauth  = yield TwitterOAuth.createInstance(event);
     const row    = yield dynamodb.get({ TableName: "twitter_oauth", Key: { "uid": sessid } }).promise();
 
     if (!row.Item) {
-      throw new Error("Record not found for sessid=" + sessid);
+      throw new Error("NO_DATA2");
     }
 
+    const oauth = yield TwitterOAuth.createInstance(event);
     const oauth_token_secret = row.Item.session;
+
+    const query = event.queryStringParameters;
     const ret = yield oauth.getOAuthAccessToken(query.oauth_token, oauth_token_secret, query.oauth_verifier);
     const me  = yield oauth.call_get_api(ret.access_token, ret.access_token_secret, "account/verify_credentials", {});
 
@@ -72,25 +77,39 @@ module.exports.callback = (event, context, callback) => {
     const secret = (yield ssm.getParameter({ Name: '/twitter_oauth/jwt_token', WithDecryption: true }).promise() ).Parameter.Value;
     const signed = jwt.sign({ sessid: sessid }, secret);
 
-    callback(null, {
+    return callback(null, {
       statusCode: 200,
       headers: { 'Content-Type': "text/html"},
       body: `<script>window.opener.postMessage("${signed}", "*"); window.close();</script>`,
     });
-
   }).catch(err => {
-    console.log("Error on callback:", err);
-    callback(null, { statusCode: 500, body: "ERROR!" });
+    return callback(null, { statusCode: 500, body: JSON.stringify({ error: err.message }) });
   });
 };
 
 module.exports.me = (event, context, callback) => {
   return vo(function*(){
-    const token  = event.headers.Authorization.split(' ')[1];
-    const secret = (yield ssm.getParameter({ Name: '/twitter_oauth/jwt_token', WithDecryption: true }).promise() ).Parameter.Value;
-    const data   = jwt.verify(token, secret);
-    const sessid = data.sessid;
+    if (!event.headers.Authorization) {
+      throw new Error("INVALID_HEADER1");
+    }
 
+    const token_matched = event.headers.Authorization.match(/^Bearer\s+(\w+\.\w+\.\w+)$/);
+
+    if (!token_matched) {
+      throw new Error("INVALID_HEADER2");
+    }
+
+    const token  = token_matched[1];
+    const secret = (yield ssm.getParameter({ Name: '/twitter_oauth/jwt_token', WithDecryption: true }).promise() ).Parameter.Value;
+    let sessid;
+
+    try {
+      const data = jwt.verify(token, secret);
+      sessid = data.sessid;
+    } catch(e) {
+      console.log("Error on jwt verify:", e.toString());
+      throw new Error("INVALID_HEADER3");
+    }
     const ret = yield dynamodb.get({
       TableName: "twitter_oauth",
       Key: { "uid": sessid },
@@ -100,11 +119,11 @@ module.exports.me = (event, context, callback) => {
     const row = ret.Item;
 
     if (!row) {
-      throw new Error("LOGIN_EXPIRED=" + sessid);
+      throw new Error("DATA_NOT_EXIST1");
     }
 
     if (!row.twitter_id) {
-      throw new Error("NOT_LOGGED_IN=" + sessid);
+      throw new Error("DATA_NOT_EXIST2");
     }
 
     return callback(null, {
@@ -118,7 +137,6 @@ module.exports.me = (event, context, callback) => {
     });
 
   }).catch(err => {
-    const res = err.message.split("=");
-    return callback(null, { statusCode: 500, body: JSON.stringify({ error: res[0] }) });
+    return callback(null, { statusCode: 500, body: JSON.stringify({ error: err.message }) });
   });
 };

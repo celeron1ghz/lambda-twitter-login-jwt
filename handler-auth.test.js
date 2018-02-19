@@ -11,13 +11,11 @@ describe('/auth test', () => {
     error ? reject(error) : resolve(result)
   });
 
-  let event;
   let lambda;
   let proxyDynamoDB;
   let proxyOAuth;
 
   beforeEach(() => {
-    event = { headers: { Cookie: null } };
     proxyOAuth = class { createInstance () {} };
     proxyDynamoDB = class { put () {} };
 
@@ -29,31 +27,24 @@ describe('/auth test', () => {
 
 
   it('ok', () => {
-    sinon
-      .stub(proxyDynamoDB.prototype, 'put')
-      .returns({
-        promise: () => Promise.resolve(null)
-      });
-
-    sinon
-      .stub(proxyOAuth, 'createInstance')
-      .returns(
-        Promise.resolve({
-          getOAuthRequestToken: () => Promise.resolve({
-            oauth_token: "oauth_token", oauth_token_secret: "oauth_sec", results: {}
-          })
+    sinon.stub(proxyDynamoDB.prototype, 'put').returns({  promise: () => Promise.resolve(null)  });
+    sinon.stub(proxyOAuth, 'createInstance').returns(
+      Promise.resolve({
+        getOAuthRequestToken: () => Promise.resolve({
+          oauth_token: "oauth_token", oauth_token_secret: "oauth_sec", results: {}
         })
-      );
+      })
+    );
 
-    return expect(lambda.auth(event, {}, callback)).to.be.fulfilled.then(result => {
+    return expect(lambda.auth({}, {}, callback)).to.be.fulfilled.then(result => {
       const cookie = result.headers['Set-Cookie'];
       delete result.headers['Set-Cookie']
 
-      expect(cookie).to.match(/^sessid=\w{17}$/);
+      expect(cookie).to.match(/^sessid=\w+; secure;$/);
       expect(result).to.deep.equal({
-        statusCode: 200,
-        headers: {},
-        body: "https://twitter.com/oauth/authenticate?oauth_token=oauth_token",
+        statusCode: 302,
+        headers: { Location: "https://twitter.com/oauth/authenticate?oauth_token=oauth_token" },
+        body: "",
       });
     });
   });
