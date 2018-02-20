@@ -73,7 +73,7 @@ describe('/callback test', () => {
       const body = result.body;
       delete result.body;
 
-      expect(body).to.match(/^<script>window.opener.postMessage\("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.\w+.\w+", "\*"\); window.close\(\);<\/script>/);
+      expect(body).to.match(/^<script>window.opener.postMessage\("\w+\.\w+\.\w+", "\*"\); window.close\(\);<\/script>/);
 
       expect(result).to.deep.equal({ statusCode: 200, headers: { "Content-Type": "text/html" } });
     });
