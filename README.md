@@ -1,5 +1,5 @@
-# lambda-twitter-login-session
-Twitter OAuth login with serverless and session.
+# lambda-twitter-login-jwt
+Twitter OAuth login with serverless and jwt (JSON Web Token).
 
 
 ## SETUP
@@ -44,12 +44,12 @@ e.g.) `example.com`
 
 ### SETUP SERVERLESS SCRIPT
 ```
-git clone https://github.com/celeron1ghz/lambda-twitter-login.git
+git clone https://github.com/celeron1ghz/lambda-twitter-login-jwt.git
 cd lambda-twitter-login
 sls deploy
 ```
 
 
 ## SEE ALSO
- * https://github.com/celeron1ghz/lambda-twitter-login.git
+ * https://github.com/celeron1ghz/lambda-twitter-login-jwt.git
  * https://github.com/abeyuya/serverless-auth.git
