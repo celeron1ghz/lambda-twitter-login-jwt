@@ -30,54 +30,65 @@ describe('/me test', () => {
   });
 
 
-  it('errors on not specify authorization header', () => {
-    sinon.stub(proxyDynamoDB.prototype, 'get').returns({  promise: () => Promise.resolve({ Item: null })  });
 
+
+  it('errors on not specify authorization header', () => {
     return expect(lambda.me({ headers: {}}, {}, callback)).to.be.fulfilled.then(result => {
       expect(result).to.deep.equal({
-        statusCode: 500,
-        body: JSON.stringify({ error: "INVALID_HEADER1" }),
+        statusCode: 400,
+        body: JSON.stringify({ error: "INVALID_HEADER" }),
       });
     });
   });
 
 
   it('errors on invalid authorization header', () => {
-    sinon.stub(proxyDynamoDB.prototype, 'get'    ).returns({  promise: () => Promise.resolve({ Item: null })  });
-    sinon.stub(proxySSM.prototype, 'getParameter').returns({  promise: () => Promise.resolve({ Parameter: { Value: 1 } })  });
-
     return expect(lambda.me({ headers: { Authorization: "piyopiyo" }}, {}, callback)).to.be.fulfilled.then(result => {
       expect(result).to.deep.equal({
-        statusCode: 500,
-        body: JSON.stringify({ error: "INVALID_HEADER2" }),
+        statusCode: 400,
+        body: JSON.stringify({ error: "INVALID_HEADER" }),
       });
     });
   });
 
 
   it('errors on invalid jwt token', () => {
-    sinon.stub(proxyDynamoDB.prototype, 'get'    ).returns({  promise: () => Promise.resolve({ Item: null })  });
     sinon.stub(proxySSM.prototype, 'getParameter').returns({  promise: () => Promise.resolve({ Parameter: { Value: 1 } })  });
 
     return expect(lambda.me({ headers: { Authorization: "Bearer a.a.a" }}, {}, callback)).to.be.fulfilled.then(result => {
       expect(result).to.deep.equal({
-        statusCode: 500,
-        body: JSON.stringify({ error: "INVALID_HEADER3" }),
+        statusCode: 401,
+        body: JSON.stringify({ error: "INVALID_HEADER" }),
       });
     });
   });
 
 
   it('errors on no data', () => {
-    sinon.stub(proxyDynamoDB.prototype, 'get'    ).returns({  promise: () => Promise.resolve({ Item: null })  });
     sinon.stub(proxySSM.prototype, 'getParameter').returns({  promise: () => Promise.resolve({ Parameter: { Value: "1" } })  });
+    sinon.stub(proxyDynamoDB.prototype, 'get'    ).returns({  promise: () => Promise.resolve({ Item: null })  });
+
+    const signed = jwt.sign(JSON.stringify({ sessid: 'mogemogefugafuga' }), "1");
+
+    return expect(lambda.me({ headers: { Authorization: "Bearer " + signed }}, {}, callback)).to.be.fulfilled.then(result => {
+      expect(result).to.deep.equal({
+        statusCode: 401,
+        body: JSON.stringify({ error: "DATA_NOT_EXIST" }),
+      });
+    });
+  });
+
+
+  it('errors on unknown reason', () => {
+    sinon.stub(proxySSM.prototype, 'getParameter').returns({  promise: () => Promise.resolve({ Parameter: { Value: "1" } })  });
+    sinon.stub(proxyDynamoDB.prototype, 'get'    ).returns({  promise: () => Promise.reject(new Error("mogemogepiyopiyo"))  });
 
     const signed = jwt.sign(JSON.stringify({ sessid: 'mogemogefugafuga' }), "1");
 
     return expect(lambda.me({ headers: { Authorization: "Bearer " + signed }}, {}, callback)).to.be.fulfilled.then(result => {
       expect(result).to.deep.equal({
         statusCode: 500,
-        body: JSON.stringify({ error: "DATA_NOT_EXIST1" }),
+        body: JSON.stringify({ error: "mogemogepiyopiyo" }),
       });
     });
   });
@@ -91,8 +102,8 @@ describe('/me test', () => {
 
     return expect(lambda.me({ headers: { Authorization: "Bearer " + signed }}, {}, callback)).to.be.fulfilled.then(result => {
       expect(result).to.deep.equal({
-        statusCode: 500,
-        body: JSON.stringify({ error: "DATA_NOT_EXIST2" }),
+        statusCode: 401,
+        body: JSON.stringify({ error: "DATA_NOT_EXIST" }),
       });
     });
   });
@@ -118,6 +129,6 @@ describe('/me test', () => {
 
 
   afterEach(() => {
-    proxyDynamoDB.prototype.get.restore();
+    //proxyDynamoDB.prototype.get.restore();
   });
 });

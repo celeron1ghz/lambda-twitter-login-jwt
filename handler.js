@@ -43,14 +43,14 @@ module.exports.auth = (event, context, callback) => {
 module.exports.callback = (event, context, callback) => {
   return vo(function*(){
     if (!event.headers.Cookie) {
-      throw new Error("NO_DATA1");
+      throw { code: 400, message: 'NO_DATA' };
     }
 
     const sessid = Cookie.parse(event.headers.Cookie).sessid;
     const row    = yield dynamodb.get({ TableName: "twitter_oauth", Key: { "uid": sessid } }).promise();
 
     if (!row.Item) {
-      throw new Error("NO_DATA2");
+      throw { code: 401, message: 'NO_DATA' };
     }
 
     const oauth = yield TwitterOAuth.createInstance(event);
@@ -83,20 +83,25 @@ module.exports.callback = (event, context, callback) => {
       body: `<script>window.opener.postMessage("${signed}", "*"); window.close();</script>`,
     });
   }).catch(err => {
-    return callback(null, { statusCode: 500, body: JSON.stringify({ error: err.message }) });
+    if (err instanceof Error) {
+      console.log("Error on callback:", err);
+      return callback(null, { statusCode: 500,      body: JSON.stringify({ error: err.message }) });
+    } else {
+      return callback(null, { statusCode: err.code, body: JSON.stringify({ error: err.message }) });
+    }
   });
 };
 
 module.exports.me = (event, context, callback) => {
   return vo(function*(){
     if (!event.headers.Authorization) {
-      throw new Error("INVALID_HEADER1");
+      throw { code: 400, message: 'INVALID_HEADER' };
     }
 
     const token_matched = event.headers.Authorization.match(/^Bearer\s+(\w+\.\w+\.\w+)$/);
 
     if (!token_matched) {
-      throw new Error("INVALID_HEADER2");
+      throw { code: 400, message: 'INVALID_HEADER' };
     }
 
     const token  = token_matched[1];
@@ -108,8 +113,9 @@ module.exports.me = (event, context, callback) => {
       sessid = data.sessid;
     } catch(e) {
       console.log("Error on jwt verify:", e.toString());
-      throw new Error("INVALID_HEADER3");
+      throw { code: 401, message: 'INVALID_HEADER' };
     }
+
     const ret = yield dynamodb.get({
       TableName: "twitter_oauth",
       Key: { "uid": sessid },
@@ -119,11 +125,11 @@ module.exports.me = (event, context, callback) => {
     const row = ret.Item;
 
     if (!row) {
-      throw new Error("DATA_NOT_EXIST1");
+      throw { code: 401, message: 'DATA_NOT_EXIST' };
     }
 
     if (!row.twitter_id) {
-      throw new Error("DATA_NOT_EXIST2");
+      throw { code: 401, message: 'DATA_NOT_EXIST' };
     }
 
     return callback(null, {
@@ -137,6 +143,11 @@ module.exports.me = (event, context, callback) => {
     });
 
   }).catch(err => {
-    return callback(null, { statusCode: 500, body: JSON.stringify({ error: err.message }) });
+    if (err instanceof Error) {
+      console.log("Error on me:", err);
+      return callback(null, { statusCode: 500,      body: JSON.stringify({ error: err.message }) });
+    } else {
+      return callback(null, { statusCode: err.code, body: JSON.stringify({ error: err.message }) });
+    }
   });
 };

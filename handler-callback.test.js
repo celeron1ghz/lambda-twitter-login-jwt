@@ -31,8 +31,8 @@ describe('/callback test', () => {
   it('errors on no cookie', () => {
     return expect(lambda.callback({ headers: {} }, {}, callback)).to.be.fulfilled.then(result => {
       expect(result).to.deep.equal({
-        statusCode: 500,
-        body: JSON.stringify({ error: "NO_DATA1" }),
+        statusCode: 400,
+        body: JSON.stringify({ error: "NO_DATA" }),
       });
     });
   });
@@ -43,8 +43,34 @@ describe('/callback test', () => {
 
     return expect(lambda.callback({ headers: { Cookie: "mogemoge" } }, {}, callback)).to.be.fulfilled.then(result => {
       expect(result).to.deep.equal({
+        statusCode: 401,
+        body: JSON.stringify({ error: "NO_DATA" }),
+      });
+    });
+  });
+
+
+  it('errors on unknown reason', () => {
+    sinon.stub(proxyDynamoDB.prototype, 'get').returns({  promise: () => Promise.reject(new Error("popopopopopo"))  });
+    sinon.stub(proxyOAuth, 'createInstance').returns(
+      Promise.resolve({
+        getOAuthAccessToken: () =>
+          Promise.resolve({ oauth_token: "oauth_token", oauth_token_secret: "oauth_sec", results: {} }),
+        call_get_api: () =>
+          Promise.resolve(112233),
+      })
+    );
+
+    sinon.stub(proxySSM.prototype, 'getParameter').returns(
+      { promise: () => Promise.resolve({ Parameter: { Value: "mogemoge" } })  }
+    );
+
+    sinon.stub(proxyDynamoDB.prototype, 'put').returns({  promise: () => Promise.resolve(null)  });
+
+    return expect(lambda.callback({ headers: { Cookie: "mogemoge" }}, {}, callback)).to.be.fulfilled.then(result => {
+      expect(result).to.deep.equal({
         statusCode: 500,
-        body: JSON.stringify({ error: "NO_DATA2" }),
+        body: JSON.stringify({ error: "popopopopopo" }),
       });
     });
   });
