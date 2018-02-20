@@ -46,7 +46,7 @@ module.exports.callback = (event, context, callback) => {
       throw new Error("NO_DATA1");
     }
 
-    const sessid = Cookie.parse(event.headers.Cookie || '').sessid;
+    const sessid = Cookie.parse(event.headers.Cookie).sessid;
     const row    = yield dynamodb.get({ TableName: "twitter_oauth", Key: { "uid": sessid } }).promise();
 
     if (!row.Item) {

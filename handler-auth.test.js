@@ -26,6 +26,25 @@ describe('/auth test', () => {
   });
 
 
+  it('errors on dynamodn', () => {
+    sinon.stub(proxyDynamoDB.prototype, 'put').returns({  promise: () => Promise.reject("die")  });
+    sinon.stub(proxyOAuth, 'createInstance').returns(
+      Promise.resolve({
+        getOAuthRequestToken: () => Promise.resolve({
+          oauth_token: "oauth_token", oauth_token_secret: "oauth_sec", results: {}
+        })
+      })
+    );
+
+    return expect(lambda.auth({}, {}, callback)).to.be.fulfilled.then(result => {
+      expect(result).to.deep.equal({
+        statusCode: 500,
+        body: "ERROR!",
+      });
+    });
+  });
+
+
   it('ok', () => {
     sinon.stub(proxyDynamoDB.prototype, 'put').returns({  promise: () => Promise.resolve(null)  });
     sinon.stub(proxyOAuth, 'createInstance').returns(
