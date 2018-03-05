@@ -60,7 +60,7 @@ module.exports.callback = (event, context, callback) => {
     const ret = yield oauth.getOAuthAccessToken(query.oauth_token, oauth_token_secret, query.oauth_verifier);
     const me  = yield oauth.call_get_api(ret.access_token, ret.access_token_secret, "account/verify_credentials", {});
 
-    console.log("OAUTH_SUCCESS:", me.screen_name, "(" + me.name + ")");
+    console.log(JSON.stringify({ status: "success", id: me.screen_name, name: me.name }));
 
     yield dynamodb.put({
       TableName: "twitter_oauth",
@@ -98,7 +98,7 @@ module.exports.me = (event, context, callback) => {
       throw { code: 400, message: 'INVALID_HEADER' };
     }
 
-    const token_matched = event.headers.Authorization.match(/^Bearer\s+(\w+\.\w+\.\w+)$/);
+    const token_matched = event.headers.Authorization.match(/^Bearer\s+(.*?)$/);
 
     if (!token_matched) {
       throw { code: 400, message: 'INVALID_HEADER' };
