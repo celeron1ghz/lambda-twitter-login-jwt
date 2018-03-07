@@ -70,7 +70,7 @@ module.exports.callback = (event, context, callback) => {
         screen_name:       me.screen_name,
         display_name:      me.name,
         profile_image_url: me.profile_image_url_https,
-        ttl:               (new Date().getTime() / 1000 + 5),
+        ttl:               Math.floor(new Date().getTime() / 1000 + (60 * 60 * 24)),
       },
     }).promise();
 
