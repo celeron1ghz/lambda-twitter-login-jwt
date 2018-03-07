@@ -134,20 +134,27 @@ module.exports.me = (event, context, callback) => {
 
     return callback(null, {
       statusCode: 200,
-      headers: {
-        //'Access-Control-Allow-Origin': process.env.TWITTER_OAUTH_ORIGIN_URL,
-        'Access-Control-Allow-Origin': event.headers.origin,
-        'Access-Control-Allow-Credentials': true,
-      },
+      headers: { 'Access-Control-Allow-Origin': '*' },
       body: JSON.stringify(row),
     });
 
   }).catch(err => {
+    let code;
+    let mess;
+    console.log("ERROR:", err);
+
     if (err instanceof Error) {
-      console.log("Error on me:", err);
-      return callback(null, { statusCode: 500,      body: JSON.stringify({ error: err.message }) });
+      code = 500;
+      mess = 'INTERNAL_ERROR';
     } else {
-      return callback(null, { statusCode: err.code, body: JSON.stringify({ error: err.message }) });
+      code = err.code;
+      mess = err.message;
     }
+
+    return callback(null, {
+      statusCode: code,
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      body: JSON.stringify({ error: mess }),
+    });
   });
 };
