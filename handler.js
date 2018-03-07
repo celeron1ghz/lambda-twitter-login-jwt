@@ -65,12 +65,14 @@ module.exports.callback = (event, context, callback) => {
     yield dynamodb.put({
       TableName: "twitter_oauth",
       Item: {
-        uid:               sessid,
-        twitter_id:        me.id_str,
-        screen_name:       me.screen_name,
-        display_name:      me.name,
-        profile_image_url: me.profile_image_url_https,
-        ttl:               Math.floor(new Date().getTime() / 1000 + (60 * 60 * 24)),
+        uid:                  sessid,
+        twitter_id:           me.id_str,
+        screen_name:          me.screen_name,
+        display_name:         me.name,
+        profile_image_url:    me.profile_image_url_https,
+        access_token:         ret.access_token,
+        access_token_secret:  ret.access_token_secret,
+        ttl:                  Math.floor(new Date().getTime() / 1000 + (60 * 60 * 24)),
       },
     }).promise();
 
