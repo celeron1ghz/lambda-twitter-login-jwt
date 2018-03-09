@@ -10,14 +10,19 @@ const aws       = require('aws-sdk');
 const ssm       = new aws.SSM();
 const dynamodb  = new aws.DynamoDB.DocumentClient();
 
+const SESSION_TABLE           = 'twitter_oauth';
+const SSM_KEY_JWT_SECRET      = '/twitter_oauth/jwt_token';
+const SSM_KEY_CONSUMER_KEY    = '/twitter_oauth/consumer_key';
+const SSM_KEY_CONSUMER_SECRET = '/twitter_oauth/consumer_secret';
+
 module.exports.auth = (event, context, callback) => {
   return vo(function*(){
     const uid   = uniqid();
-    const oauth = yield TwitterOAuth.createInstance(event);
+    const oauth = yield TwitterOAuth.createInstance(event, SSM_KEY_CONSUMER_KEY, SSM_KEY_CONSUMER_SECRET);
     const auth  = yield oauth.getOAuthRequestToken();
 
     const ret = yield dynamodb.put({
-      TableName: "twitter_oauth",
+      TableName: SESSION_TABLE,
       Item: {
         uid: uid,
         ttl: (new Date().getTime() / 1000 + 60 * 24),
@@ -47,7 +52,7 @@ module.exports.callback = (event, context, callback) => {
     }
 
     const sessid = Cookie.parse(event.headers.Cookie).sessid;
-    const row    = yield dynamodb.get({ TableName: "twitter_oauth", Key: { "uid": sessid } }).promise();
+    const row    = yield dynamodb.get({ TableName: SESSION_TABLE, Key: { "uid": sessid } }).promise();
 
     if (!row.Item) {
       throw { code: 401, message: 'NO_DATA' };
@@ -63,7 +68,7 @@ module.exports.callback = (event, context, callback) => {
     console.log(JSON.stringify({ status: "success", id: me.screen_name, name: me.name }));
 
     yield dynamodb.put({
-      TableName: "twitter_oauth",
+      TableName: SESSION_TABLE,
       Item: {
         uid:                  sessid,
         twitter_id:           me.id_str,
@@ -76,7 +81,7 @@ module.exports.callback = (event, context, callback) => {
       },
     }).promise();
 
-    const secret = (yield ssm.getParameter({ Name: '/twitter_oauth/jwt_token', WithDecryption: true }).promise() ).Parameter.Value;
+    const secret = (yield ssm.getParameter({ Name: SSM_KEY_JWT_SECRET, WithDecryption: true }).promise() ).Parameter.Value;
     const signed = jwt.sign({ sessid: sessid }, secret);
 
     return callback(null, {
@@ -107,7 +112,7 @@ module.exports.me = (event, context, callback) => {
     }
 
     const token  = token_matched[1];
-    const secret = (yield ssm.getParameter({ Name: '/twitter_oauth/jwt_token', WithDecryption: true }).promise() ).Parameter.Value;
+    const secret = (yield ssm.getParameter({ Name: SSM_KEY_JWT_SECRET, WithDecryption: true }).promise() ).Parameter.Value;
     let sessid;
 
     try {
@@ -119,7 +124,7 @@ module.exports.me = (event, context, callback) => {
     }
 
     const ret = yield dynamodb.get({
-      TableName: "twitter_oauth",
+      TableName: SESSION_TABLE,
       Key: { "uid": sessid },
       AttributesToGet: ['twitter_id', 'screen_name', 'display_name', 'profile_image_url']
     }).promise();
