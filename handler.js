@@ -58,7 +58,7 @@ module.exports.callback = (event, context, callback) => {
       throw { code: 401, message: 'NO_DATA' };
     }
 
-    const oauth = yield TwitterOAuth.createInstance(event);
+    const oauth = yield TwitterOAuth.createInstance(event, SSM_KEY_CONSUMER_KEY, SSM_KEY_CONSUMER_SECRET);
     const oauth_token_secret = row.Item.session;
 
     const query = event.queryStringParameters;
