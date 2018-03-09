@@ -36,6 +36,7 @@ describe('/me test', () => {
     return expect(lambda.me({ headers: {}}, {}, callback)).to.be.fulfilled.then(result => {
       expect(result).to.deep.equal({
         statusCode: 400,
+        headers: { "Access-Control-Allow-Origin": "*" },
         body: JSON.stringify({ error: "INVALID_HEADER" }),
       });
     });
@@ -46,6 +47,7 @@ describe('/me test', () => {
     return expect(lambda.me({ headers: { Authorization: "piyopiyo" }}, {}, callback)).to.be.fulfilled.then(result => {
       expect(result).to.deep.equal({
         statusCode: 400,
+        headers: { "Access-Control-Allow-Origin": "*" },
         body: JSON.stringify({ error: "INVALID_HEADER" }),
       });
     });
@@ -58,6 +60,7 @@ describe('/me test', () => {
     return expect(lambda.me({ headers: { Authorization: "Bearer a.a.a" }}, {}, callback)).to.be.fulfilled.then(result => {
       expect(result).to.deep.equal({
         statusCode: 401,
+        headers: { "Access-Control-Allow-Origin": "*" },
         body: JSON.stringify({ error: "INVALID_HEADER" }),
       });
     });
@@ -73,6 +76,7 @@ describe('/me test', () => {
     return expect(lambda.me({ headers: { Authorization: "Bearer " + signed }}, {}, callback)).to.be.fulfilled.then(result => {
       expect(result).to.deep.equal({
         statusCode: 401,
+        headers: { "Access-Control-Allow-Origin": "*" },
         body: JSON.stringify({ error: "DATA_NOT_EXIST" }),
       });
     });
@@ -88,7 +92,8 @@ describe('/me test', () => {
     return expect(lambda.me({ headers: { Authorization: "Bearer " + signed }}, {}, callback)).to.be.fulfilled.then(result => {
       expect(result).to.deep.equal({
         statusCode: 500,
-        body: JSON.stringify({ error: "mogemogepiyopiyo" }),
+        headers: { "Access-Control-Allow-Origin": "*" },
+        body: JSON.stringify({ error: "INTERNAL_ERROR" }),
       });
     });
   });
@@ -103,6 +108,7 @@ describe('/me test', () => {
     return expect(lambda.me({ headers: { Authorization: "Bearer " + signed }}, {}, callback)).to.be.fulfilled.then(result => {
       expect(result).to.deep.equal({
         statusCode: 401,
+        headers: { "Access-Control-Allow-Origin": "*" },
         body: JSON.stringify({ error: "DATA_NOT_EXIST" }),
       });
     });
@@ -118,10 +124,7 @@ describe('/me test', () => {
     return expect(lambda.me({ headers: { Authorization: "Bearer " + signed }}, {}, callback)).to.be.fulfilled.then(result => {
       expect(result).to.deep.equal({
         statusCode: 200,
-        headers: {
-          "Access-Control-Allow-Credentials": true,
-          "Access-Control-Allow-Origin": undefined,
-        },
+        headers: { "Access-Control-Allow-Origin": "*" },
         body: JSON.stringify({ twitter_id: "mogemoge" }),
       });
     });
